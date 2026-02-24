@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vietnormalizer"
+version = "0.1.0"
+description = "A Python library for normalizing Vietnamese text for TTS and NLP applications"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    {name = "Nghi Studio", email = "nghimestudio@gmail.com"},  # TODO: Update with your info
+]
+keywords = ["vietnamese", "text-normalization", "nlp", "tts", "text-to-speech"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/nghimestudio/vietnormalizer"  # TODO: Update with your repo
+Repository = "https://github.com/nghimestudio/vietnormalizer"  # TODO: Update with your repo
+Issues = "https://github.com/nghimestudio/vietnormalizer/issues"  # TODO: Update with your repo
+
+[tool.setuptools]
+packages = ["vietnormalizer", "vietnormalizer.data"]
+
+[tool.setuptools.package-data]
+vietnormalizer = ["data/*.csv"]
+
