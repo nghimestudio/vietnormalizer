@@ -128,8 +128,15 @@ class VietnameseNormalizer:
                 with open(words_path, "r", encoding="utf-8") as f:
                     reader = csv.DictReader(f)
                     for row in reader:
-                        word = row.get("word", "").strip().lower()
-                        pronunciation = row.get("vietnamese_pronunciation", "").strip()
+                        # Support multiple column name formats
+                        word = (
+                            row.get("word", "") or 
+                            row.get("original", "")
+                        ).strip().lower()
+                        pronunciation = (
+                            row.get("vietnamese_pronunciation", "") or 
+                            row.get("transliteration", "")
+                        ).strip()
                         if word and pronunciation:
                             word_map[word] = pronunciation
             except Exception as e:
