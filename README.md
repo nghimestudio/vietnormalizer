@@ -146,10 +146,10 @@ AI,trí tuệ nhân tạo
 ### Non-Vietnamese Words CSV
 
 ```csv
-word,vietnamese_pronunciation
-hello,xin chào
-computer,máy tính
-internet,in-tơ-nét
+original,transliteration
+original,ô-ri-gin-nồ
+container,công-tê-nơ
+singapore,xin-ga-po
 ```
 
 ## Performance
