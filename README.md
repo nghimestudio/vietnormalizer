@@ -48,11 +48,29 @@ from vietnormalizer import VietnameseNormalizer
 # Initialize the normalizer
 normalizer = VietnameseNormalizer()
 
-# Normalize text
+# Example 1: Numbers, dates, and times
 text = "Hôm nay là 25/12/2023, lúc 14:30"
 normalized = normalizer.normalize(text)
 print(normalized)
-# Output: "Hôm nay là ngày hai mươi lăm tháng mười hai năm hai nghìn không trăm hai mươi ba, lúc mười bốn giờ ba mươi"
+# Output: "hôm nay là ngày hai mươi lăm tháng mười hai năm hai nghìn không trăm hai mươi ba, lúc mười bốn giờ ba mươi phút"
+
+# Example 2: Acronym expansion (from built-in dictionary)
+text = "Tôi làm việc tại NASA và xem TV"
+normalized = normalizer.normalize(text)
+print(normalized)
+# Output: "Tôi làm việc tại na-sa và xem Ti vi"
+
+# Example 3: Non-Vietnamese word transliteration (from built-in dictionary)
+text = "Hello container from Singapore"
+normalized = normalizer.normalize(text)
+print(normalized)
+# Output: "hê-lô công-tê-nơ phờ-rôm xin-ga-po"
+
+# Example 4: Combined - numbers, acronyms, and foreign words
+text = "Giá container là 1.500.000 đồng, giao hàng từ Singapore"
+normalized = normalizer.normalize(text)
+print(normalized)
+# Output: "Giá công-tê-nơ là một triệu năm trăm nghìn đồng, giao hàng từ xin-ga-po"
 ```
 
 ## Usage Examples
