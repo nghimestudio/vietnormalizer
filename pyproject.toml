@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vietnormalizer"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python library for normalizing Vietnamese text for TTS and NLP applications"
 readme = "README.md"
 requires-python = ">=3.8"
