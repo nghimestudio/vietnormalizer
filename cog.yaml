@@ -1,0 +1,9 @@
+build:
+  gpu: true
+  python_version: "3.11"
+  python_requirements: "requirements.txt"
+  system_packages:
+    - "espeak-ng"
+    - "espeak-ng-data"
+    - "libespeak-ng1"
+predict: "predict.py:Predictor"
