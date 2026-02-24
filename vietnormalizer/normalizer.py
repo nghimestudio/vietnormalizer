@@ -147,37 +147,18 @@ class VietnameseNormalizer:
         return dict(sorted(word_map.items(), key=lambda x: len(x[0]), reverse=True))
     
     def _compile_regex_patterns(self):
-        """Pre-compile regex patterns for faster text normalization."""
-        # Create a single combined pattern for all replacements
-        # This is much faster than doing 100+ separate regex scans
-        all_patterns = []
-        replacements = {}
+        """Build replacement dictionary for fast word-by-word lookup."""
+        # For large dictionaries (17K+ words), regex alternation is extremely slow
+        # Use word-by-word dictionary lookup instead (O(n) where n = number of words)
+        self.replacements = {}
         
         # Add non-Vietnamese words
         for word, pronunciation in self.non_vietnamese_map.items():
-            escaped_word = re.escape(word)
-            pattern_str = rf'\b{escaped_word}\b'
-            all_patterns.append(pattern_str)
-            replacements[word.lower()] = pronunciation
+            self.replacements[word.lower()] = pronunciation
         
         # Add acronyms
         for acronym, transliteration in self.acronym_map.items():
-            escaped_acronym = re.escape(acronym)
-            pattern_str = rf'\b{escaped_acronym}\b'
-            all_patterns.append(pattern_str)
-            replacements[acronym.lower()] = transliteration
-        
-        # Combine all patterns into one regex (using alternation)
-        # Sort by length (longest first) to match longer patterns first
-        if all_patterns:
-            # Sort patterns by length descending to match longer ones first
-            sorted_patterns = sorted(all_patterns, key=len, reverse=True)
-            combined_pattern = '|'.join(f'({p})' for p in sorted_patterns)
-            self.combined_regex = re.compile(combined_pattern, re.IGNORECASE)
-            self.replacements = replacements
-        else:
-            self.combined_regex = None
-            self.replacements = {}
+            self.replacements[acronym.lower()] = transliteration
     
     def normalize(
         self,
@@ -208,24 +189,27 @@ class VietnameseNormalizer:
             normalized = unicodedata.normalize('NFC', text)
             normalized = re.sub(r'\s+', ' ', normalized).strip()
         
-        # Step 2: Normalize to lowercase for consistent matching
-        mapping_input = normalized.lower()
-        
-        # Step 3 & 4: Replace all words/acronyms in a SINGLE pass using combined regex
-        # This is MUCH faster than 100+ separate regex scans
-        if self.combined_regex:
-            def replace_func(match):
-                matched = match.group(0).lower()
-                replacement = self.replacements.get(matched, matched)
-                # Preserve original case if first letter was uppercase
-                if match.group(0) and match.group(0)[0].isupper():
-                    return replacement[0].upper() + replacement[1:] if len(replacement) > 1 else replacement.upper()
-                return replacement
+        # Step 2: Replace words/acronyms using fast word-by-word lookup
+        # This is much faster than regex for large dictionaries (17K+ words)
+        if self.replacements:
+            # Use regex to find word boundaries and replace words
+            # This preserves spaces and punctuation
+            def replace_word(match):
+                word = match.group(0)
+                word_lower = word.lower()
+                if word_lower in self.replacements:
+                    replacement = self.replacements[word_lower]
+                    # Preserve original case if first letter was uppercase
+                    if word and word[0].isupper():
+                        replacement = replacement[0].upper() + replacement[1:] if len(replacement) > 1 else replacement.upper()
+                    return replacement
+                return word
             
-            mapping_input = self.combined_regex.sub(replace_func, mapping_input)
+            # Match word boundaries (alphanumeric sequences)
+            normalized = re.sub(r'\b\w+\b', replace_word, normalized)
         
         # Clean up whitespace
-        normalized = re.sub(r'\s+', ' ', mapping_input).strip()
+        normalized = re.sub(r'\s+', ' ', normalized).strip()
         
         return normalized
     
