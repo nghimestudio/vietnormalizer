@@ -17,6 +17,18 @@ from .transliterator import transliterate_word
 
 _WORD_BOUNDARY_REGEX = re.compile(r'[\w\u00C0-\u1EFF]+')
 
+# Uppercase code pattern: 2+ chars, starts with uppercase letter, only uppercase + digits
+_UPPERCASE_CODE_PATTERN = re.compile(r'\b([A-Z][A-Z0-9]+)\b')
+
+LETTER_NAMES = {
+    'A': 'a', 'B': 'bê', 'C': 'xê', 'D': 'đê', 'E': 'ê',
+    'F': 'ép', 'G': 'giê', 'H': 'hát', 'I': 'i', 'J': 'giây',
+    'K': 'ca', 'L': 'e-lờ', 'M': 'em', 'N': 'en', 'O': 'o',
+    'P': 'pê', 'Q': 'cu', 'R': 'e-rờ', 'S': 'ét', 'T': 'tê',
+    'U': 'u', 'V': 'vê', 'W': 'vê kép', 'X': 'ích', 'Y': 'i',
+    'Z': 'dét',
+}
+
 
 class VietnameseNormalizer:
     """
@@ -141,12 +153,44 @@ class VietnameseNormalizer:
         return dict(sorted(word_map.items(), key=lambda x: len(x[0]), reverse=True))
     
     def _build_replacement_dict(self):
-        """Build combined replacement dictionary for fast word-by-word lookup."""
+        """Build replacement dictionary from non-Vietnamese words only.
+        Acronyms are handled separately by _handle_uppercase_codes (uppercase only)."""
         self.replacements = {}
         for word, pronunciation in self.non_vietnamese_map.items():
             self.replacements[word.lower()] = pronunciation
-        for acronym, transliteration in self.acronym_map.items():
-            self.replacements[acronym.lower()] = transliteration
+    
+    def _spell_out_code(self, code: str) -> str:
+        """Spell out an alphanumeric code letter by letter, digit groups as numbers.
+        E.g. 'SE3' → 'ét ê ba', 'D19E' → 'đê mười chín ê'"""
+        parts = []
+        i = 0
+        while i < len(code):
+            if code[i].isdigit():
+                # Collect consecutive digits
+                j = i
+                while j < len(code) and code[j].isdigit():
+                    j += 1
+                parts.append(self.processor.number_to_words(code[i:j]))
+                i = j
+            elif code[i].upper() in LETTER_NAMES:
+                parts.append(LETTER_NAMES[code[i].upper()])
+                i += 1
+            else:
+                i += 1
+        return ' '.join(parts)
+    
+    def _handle_uppercase_codes(self, text: str) -> str:
+        """Handle uppercase codes: check acronym dict first, else spell out letter by letter.
+        Must be called BEFORE lowercasing."""
+        def replace_code(match):
+            code = match.group(1)
+            code_lower = code.lower()
+            # Check acronym dictionary first
+            if code_lower in self.acronym_map:
+                return self.acronym_map[code_lower]
+            # Not in acronym dict → spell out
+            return self._spell_out_code(code)
+        return _UPPERCASE_CODE_PATTERN.sub(replace_code, text)
     
     def _apply_transliteration(self, text: str) -> str:
         """
@@ -245,7 +289,11 @@ class VietnameseNormalizer:
             normalized = unicodedata.normalize('NFC', text)
             normalized = re.sub(r'\s+', ' ', normalized).strip()
         
-        # Step 2: Lowercase normalization for consistent matching
+        # Step 2: Handle uppercase codes (acronyms/abbreviations)
+        # Must run BEFORE lowercasing to detect uppercase
+        normalized = self._handle_uppercase_codes(normalized)
+        
+        # Step 3: Lowercase normalization for consistent matching
         normalized = normalized.lower()
         
         # Step 3 & 4: Replace words/acronyms using fast word-by-word lookup
