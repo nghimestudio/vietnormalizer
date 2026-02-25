@@ -45,3 +45,4 @@ htmlcov/
 *.wav
 output.wav
 
+.github/
