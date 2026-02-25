@@ -133,6 +133,17 @@ class VietnameseTextProcessor:
         self.roman_numeral_pattern = re.compile(r'\b([IVXLC]{2,})\b')
         self.roman_values = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
         
+        # Address number patterns (X/Y or X/Y/Z with "trên" separator)
+        # Rule 1: keyword + number/number... → always address
+        self.address_keyword_pattern = re.compile(
+            r'(số|nhà|đường|hẻm|ngõ|ngách|kiệt|phố)\s+(\d+(?:/\d+)+)',
+            re.IGNORECASE
+        )
+        # Rule 2: X/Y/Z where Z is 1-3 digits → address (date needs 4-digit year)
+        self.address_3part_pattern = re.compile(r'\b(\d+)/(\d+)/(\d{1,3})\b')
+        # Rule 3: X/Y where X has 3+ digits → address (can't be a date)
+        self.address_bignum_pattern = re.compile(r'\b(\d{3,})/(\d+)\b')
+        
         # Pre-compile measurement unit patterns (sorted longest first)
         self._compile_unit_patterns()
     
@@ -496,6 +507,34 @@ class VietnameseTextProcessor:
             return match.group(0)
         return self.roman_numeral_pattern.sub(replace_roman, text)
     
+    def _read_address_parts(self, parts_str: str) -> str:
+        """Read address number parts separated by / as 'X trên Y trên Z'."""
+        parts = parts_str.split('/')
+        return ' trên '.join(self.number_to_words(p) for p in parts)
+    
+    def convert_address_number(self, text: str) -> str:
+        """Convert address numbers like 13/2/80, 878/16 with 'trên' separator.
+        Must be called BEFORE date conversion to avoid conflicts."""
+        # Rule 1: keyword + number/number... → always address
+        def replace_keyword(match):
+            keyword = match.group(1)
+            return keyword + ' ' + self._read_address_parts(match.group(2))
+        text = self.address_keyword_pattern.sub(replace_keyword, text)
+        
+        # Rule 2: X/Y/Z where Z is 1-3 digits → address (not a 4-digit year)
+        def replace_3part(match):
+            parts = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
+            return self._read_address_parts(parts)
+        text = self.address_3part_pattern.sub(replace_3part, text)
+        
+        # Rule 3: X/Y where X has 3+ digits → can't be a date
+        def replace_bignum(match):
+            parts = f"{match.group(1)}/{match.group(2)}"
+            return self._read_address_parts(parts)
+        text = self.address_bignum_pattern.sub(replace_bignum, text)
+        
+        return text
+    
     def convert_standalone_numbers(self, text: str) -> str:
         """Convert remaining standalone numbers to words."""
         def replace_standalone(match):
@@ -564,49 +603,52 @@ class VietnameseTextProcessor:
         # Step 4: Clean text (emojis, non-Latin chars)
         text = self.clean_text_for_tts(text)
         
-        # Step 5: Convert year ranges (before other number conversions)
+        # Step 5: Convert address numbers BEFORE dates to avoid conflicts (13/2/80 vs date)
+        text = self.convert_address_number(text)
+        
+        # Step 6: Convert year ranges (before other number conversions)
         text = self.convert_year_range(text)
         
-        # Step 6: Convert percentage ranges BEFORE dates to avoid "3-5%" being matched as date
+        # Step 7: Convert percentage ranges BEFORE dates to avoid "3-5%" being matched as date
         text = self.percentage_range_pattern.sub(
             lambda m: f"{self.number_to_words(m.group(1))} đến {self.number_to_words(m.group(2))} phần trăm",
             text
         )
         
-        # Step 7: Convert dates (including date ranges)
+        # Step 8: Convert dates (including date ranges)
         text = self.convert_date(text)
         
-        # Step 8: Convert times
+        # Step 9: Convert times
         text = self.convert_time(text)
         
-        # Step 9: Convert ordinals (thứ 2 -> thứ hai)
+        # Step 10: Convert ordinals (thứ 2 -> thứ hai)
         text = self.convert_ordinal(text)
         
-        # Step 10: Remove thousand separators
+        # Step 11: Remove thousand separators
         text = self.remove_thousand_separators(text)
         
-        # Step 11: Convert currency
+        # Step 12: Convert currency
         text = self.convert_currency(text)
         
-        # Step 12: Convert percentages (decimals and whole numbers - ranges already handled)
+        # Step 13: Convert percentages (decimals and whole numbers - ranges already handled)
         text = self.convert_percentage(text)
         
-        # Step 13: Convert phone numbers
+        # Step 14: Convert phone numbers
         text = self.convert_phone_number(text)
         
-        # Step 14: Convert decimals
+        # Step 15: Convert decimals
         text = self.convert_decimal(text)
         
-        # Step 15: Convert measurement units
+        # Step 16: Convert measurement units
         text = self.convert_measurement_units(text)
         
-        # Step 16: Convert Roman numerals (uppercase only, < 100)
+        # Step 17: Convert Roman numerals (uppercase only, < 100)
         text = self.convert_roman_numerals(text)
         
-        # Step 17: Convert remaining standalone numbers
+        # Step 18: Convert remaining standalone numbers
         text = self.convert_standalone_numbers(text)
         
-        # Step 18: Clean whitespace
+        # Step 19: Clean whitespace
         text = self.whitespace_pattern.sub(' ', text).strip()
         
         return text

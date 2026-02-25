@@ -11,7 +11,7 @@ long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists
 
 setup(
     name="vietnormalizer",
-    version="0.2.1",
+    version="0.2.2",
     description="A Python library for normalizing Vietnamese text for TTS and NLP applications",
     long_description=long_description,
     long_description_content_type="text/markdown",

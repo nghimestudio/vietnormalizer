@@ -25,7 +25,7 @@ from .processor import VietnameseTextProcessor
 from .detector import VnLanguageDetector, is_vietnamese_word
 from .transliterator import transliterate_word, english_to_vietnamese
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __all__ = [
     "VietnameseNormalizer",
     "VietnameseTextProcessor",
