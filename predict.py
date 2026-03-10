@@ -424,10 +424,11 @@ class Predictor(BasePredictor):
             self.replacements = {}
     
     def _load_acronyms(self) -> Dict[str, str]:
-        """Load acronym mappings from CSV."""
+        """Load acronym mappings from the shared vietnormalizer data CSV."""
         acronym_map = {}
-        acronyms_path = Path("public/acronyms.csv")
-        
+        data_dir = Path(__file__).resolve().parent / "vietnormalizer" / "data"
+        acronyms_path = data_dir / "acronyms.csv"
+
         if acronyms_path.exists():
             with open(acronyms_path, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
@@ -436,24 +437,26 @@ class Predictor(BasePredictor):
                     transliteration = row.get("transliteration", "").strip()
                     if acronym and transliteration:
                         acronym_map[acronym] = transliteration
-        
+
         # Sort by length (longest first) for proper matching priority
         return dict(sorted(acronym_map.items(), key=lambda x: len(x[0]), reverse=True))
     
     def _load_non_vietnamese_words(self) -> Dict[str, str]:
-        """Load non-Vietnamese word mappings from CSV."""
+        """Load non-Vietnamese word mappings from the shared vietnormalizer data CSV."""
         word_map = {}
-        words_path = Path("public/non-vietnamese-words.csv")
-        
+        data_dir = Path(__file__).resolve().parent / "vietnormalizer" / "data"
+        words_path = data_dir / "non-vietnamese-words.csv"
+
         if words_path.exists():
             with open(words_path, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    word = row.get("word", "").strip().lower()
-                    pronunciation = row.get("vietnamese_pronunciation", "").strip()
+                    # Support both the public/ and package CSV header formats
+                    word = (row.get("word", "") or row.get("original", "")).strip().lower()
+                    pronunciation = (row.get("vietnamese_pronunciation", "") or row.get("transliteration", "")).strip()
                     if word and pronunciation:
                         word_map[word] = pronunciation
-        
+
         # Sort by length (longest first) for proper matching priority
         return dict(sorted(word_map.items(), key=lambda x: len(x[0]), reverse=True))
     

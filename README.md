@@ -148,6 +148,8 @@ singapore,xin-ga-po
 server,xơ-vơ
 ```
 
+For more details about the built-in CSV dictionaries and their structure, see `vietnormalizer/data/README.md`.
+
 ## Advanced Usage
 
 ### Using the Processor Directly
